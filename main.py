@@ -80,12 +80,14 @@ def contrastive_generation(
     initial_input_ids = tokenizer.encode(prompt, return_tensors="pt").to(device)
     generated_ids = initial_input_ids.clone()
 
+	# This builds kv cache for further optimization
     expert_past, _ = prime_kv_cache(expert, initial_input_ids)
     if amateur_last_token_only:
         amateur_past = None  
     else:
         amateur_past, _ = prime_kv_cache(amateur, initial_input_ids)
 
+	# Feed the last token when we step through with a cache
     for _ in range(max_tokens):
         current_token = generated_ids[:, -1:]
 
@@ -96,7 +98,7 @@ def contrastive_generation(
         amateur_logits, amateur_past = get_logits(amateur, current_token, amateur_past_step)
         log_pa = F.log_softmax(amateur_logits / tau, dim=-1)
 
-        # keep tokens where log_pe >= log_max + log(alpha)
+        # keep tokens where log_pe >= log_max + log(alpha), according to the paper
         log_max = log_pe.max(dim=-1, keepdim=True).values  # (1,1)
         thresh = log_max + math.log(alpha)
         keep_mask = log_pe >= thresh  # (1, V) 
@@ -107,7 +109,7 @@ def contrastive_generation(
             cap_mask.scatter_(1, idx, True)
             keep_mask = keep_mask & cap_mask
 
-        # fall back to top-1 expert
+        # fall back to top-1 expert if alpha too low
         if not torch.any(keep_mask):
             keep_mask = log_pe == log_max
 
