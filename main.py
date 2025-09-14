@@ -1,4 +1,8 @@
+import torch
 import transformers as tr
+from torch.nn import functional as F
+import concurrent.futures
+import math
 
 amateur_path = "Qwen/Qwen2.5-Coder-0.5B-Instruct"
 expert_path = "Qwen/Qwen2.5-Coder-1.5B-Instruct"
@@ -40,4 +44,5 @@ prompt = tokenizer.apply_chat_template(
 
 
 def contrastive_generation(amateur, expert, prompt, max_tokens) -> str:
+
     return ""
